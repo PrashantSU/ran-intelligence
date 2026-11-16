@@ -322,4 +322,81 @@ Forecast results can be included in incident reports, with the model, horizon an
 
 **Network simulation**
 
-Synthetic
+Synthetic scenarios can be used to test forecasting performance under controlled traffic and radio conditions.
+
+## 12. Proposed Python Module Structure
+
+```text
+src/
+└── ran_intelligence/
+    └── forecasting/
+        ├── __init__.py
+        ├── preprocessing.py
+        ├── features.py
+        ├── baselines.py
+        ├── statistical_models.py
+        ├── ml_models.py
+        ├── deep_learning.py
+        ├── evaluation.py
+        └── prediction.py
+```
+
+Responsibilities:
+
+- `preprocessing.py`: Prepare time-series data.
+- `features.py`: Generate lag, rolling and time-based features.
+- `baselines.py`: Implement naive and moving-average forecasts.
+- `statistical_models.py`: Implement exponential smoothing and ARIMA.
+- `ml_models.py`: Train machine learning forecasting models.
+- `deep_learning.py`: Implement sequence-based models if required.
+- `evaluation.py`: Compare models using chronological evaluation.
+- `prediction.py`: Generate and format forecast results.
+
+## 13. Implementation Order
+
+The component will be developed incrementally.
+
+**Stage 1 — Prepare time-series data**
+
+- Select a KPI.
+- Check timestamps and sampling intervals.
+- Aggregate measurements if necessary.
+- Handle missing observations.
+
+**Stage 2 — Implement baselines**
+
+- Naive forecasting.
+- Moving average.
+- Exponential smoothing.
+
+**Stage 3 — Add statistical and ML models**
+
+- Evaluate ARIMA where appropriate.
+- Train Random Forest or XGBoost models.
+- Compare results against the baselines.
+
+**Stage 4 — Evaluate forecasting performance**
+
+- Use chronological train, validation and test periods.
+- Calculate MAE and RMSE.
+- Inspect errors across different periods and conditions.
+
+**Stage 5 — Add visualisation**
+
+- Display historical and predicted values.
+- Add model comparisons.
+- Show prediction intervals where available.
+
+**Stage 6 — Integrate with the platform**
+
+- Expose forecasting functions to the API.
+- Make forecasts available to incident investigation.
+- Include forecast results in reports.
+
+## 14. Expected Outcome
+
+The forecasting component should estimate future network KPI values and make those estimates accessible through the platform.
+
+An engineer should be able to inspect historical measurements, select a KPI and cell, generate a forecast and compare predicted values with actual measurements.
+
+The first version will prioritise reliable baselines and correct evaluation. More advanced models will be added only when they provide measurable value.
