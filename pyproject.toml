@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ran-intelligence"
+version = "0.1.0"
+description = "AI-powered 5G RAN intelligence and incident investigation platform"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Prashant Kumar Singh"}
+]
+
+dependencies = [
+    "numpy",
+    "pandas",
+    "pydantic>=2",
+    "python-dotenv",
+    "PyYAML",
+    "loguru",
+]
+
+[project.optional-dependencies]
+api = [
+    "fastapi",
+    "uvicorn[standard]",
+]
+
+analytics = [
+    "scikit-learn",
+    "scipy",
+    "plotly",
+    "xgboost",
+]
+
+rag = [
+    "sentence-transformers",
+    "faiss-cpu",
+    "rank-bm25",
+]
+
+agents = [
+    "langchain",
+    "langgraph",
+]
+
+dashboard = [
+    "streamlit",
+]
+
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "httpx",
+]
+
+all = [
+    "ran-intelligence[api,analytics,rag,agents,dashboard,dev]"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
