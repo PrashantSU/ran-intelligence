@@ -1,1 +1,1 @@
-# ran-intellegence
+# ran-intelligence
