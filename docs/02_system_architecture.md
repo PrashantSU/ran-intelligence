@@ -1,280 +1,318 @@
 # RAN Intelligence Platform
-## Project Requirements
+## System Architecture
 
-## 1. Introduction
+## 1. Overview
 
-RAN Intelligence is a project focused on analysing and understanding the performance of mobile radio access networks (RAN). The idea is to bring network data analysis, machine learning and generative AI together in one application that can help engineers investigate network performance issues.
+RAN Intelligence will use a modular architecture built primarily with Python. The application will combine network data processing, analytics, machine learning, document retrieval and AI-assisted incident investigation.
 
-Mobile networks produce large amounts of measurement data, configuration information and event logs. Understanding a performance issue often requires looking at several sources of information and comparing measurements over time.
+The aim is to keep the different parts independent enough to develop and test separately, while allowing them to work together through shared data and application services.
 
-This project aims to make that process easier. It will provide tools for exploring network performance, detecting unusual behaviour, forecasting selected KPIs and searching technical documentation. It will also include an AI-assisted investigation workflow that combines measurement data with information retrieved from telecom documentation.
+The user interface will be built with Streamlit. FastAPI will provide the backend API, while the main processing and AI functionality will live in separate Python modules.
 
-The project will cover both general RAN analytics and selected 5G NR research topics, including coordinated beamforming and prediction-assisted scheduling.
+During development, the system will run locally or through Google Colab for individual experiments. GitHub will be used to maintain the source code and documentation.
 
-## 2. Main Goals
+## 2. High-Level Architecture
 
-The main goals of the project are:
+The system is organised into six main layers:
 
-- Build a data pipeline for importing, validating and processing network measurements.
-- Analyse important radio and network performance indicators.
-- Apply machine learning to anomaly detection and KPI forecasting.
-- Develop a RAG system for searching telecom standards, technical documents and research papers.
-- Build an AI-assisted workflow for investigating network incidents.
-- Explore selected 5G NR problems through simulations and experiments.
-- Evaluate the different components using reproducible experiments.
-- Bring the functionality together in an interactive application.
+1. **Data sources:** Network measurements, event records, technical documents and configuration data.
+2. **Data processing:** Importing, validation, cleaning, transformation and storage.
+3. **Analytics and machine learning:** KPI analysis, anomaly detection and forecasting.
+4. **Knowledge retrieval:** Document processing, embeddings, hybrid search and reranking.
+5. **Investigation and simulation:** AI-assisted incident analysis, evidence collection and network experiments.
+6. **Application interface:** Dashboards, document search, incident investigation and reporting.
 
-The emphasis will be on building working components and evaluating their results, rather than simply demonstrating the use of different AI frameworks.
+These layers are logical parts of the application. They do not necessarily need to run as separate services.
 
-## 3. Intended Users
+## 3. Architecture Components
 
-The application is primarily intended for:
+### 3.1 User Interface — Streamlit
 
-- RAN and radio network engineers.
-- Network performance and optimisation engineers.
-- Telecom data scientists.
-- Machine learning engineers working with network data.
-- Researchers working on wireless communication systems.
+Streamlit will provide the main interface for users.
 
-The main use case is an engineer who wants to understand why a cell or group of cells is experiencing degraded performance.
+It will contain separate sections for:
 
-## 4. Functional Requirements
+- Network overview and KPI dashboards.
+- Dataset upload and data quality results.
+- Anomaly detection and forecasting.
+- Telecom document search.
+- AI-assisted incident investigation.
+- 5G NR experiments and simulation.
+- Evaluation results and reports.
 
-### 4.1 Network Data Ingestion and Processing
+The interface will focus on presenting results and collecting user inputs. The underlying data processing and model logic will remain outside the UI code.
 
-The application should be able to import network measurements from structured files, initially using CSV.
+### 3.2 Backend API — FastAPI
 
-The ingestion pipeline will handle:
+FastAPI will expose the main application functionality through API endpoints.
 
-- Reading and validating incoming data.
-- Identifying missing, duplicate and invalid records.
-- Converting measurements into consistent formats.
-- Applying basic data quality checks.
-- Storing processed data for further analysis.
-- Keeping track of the source and processing history of datasets.
+Its responsibilities will include:
 
-The initial implementation will use public and synthetic datasets.
+- Receiving requests from the user interface.
+- Handling dataset uploads and incident submissions.
+- Calling the appropriate application services.
+- Returning analysis results.
+- Managing request validation and errors.
 
-### 4.2 Network KPI Analysis
+The API will also make it easier to test the application independently of Streamlit.
 
-The analytics module will focus on commonly used radio and network performance indicators, including:
+### 3.3 Data Ingestion and Storage
 
-- RSRP and RSRQ.
-- SINR.
-- Downlink and uplink throughput.
-- CQI and MCS.
-- BLER.
-- PRB utilisation.
-- Retransmission rates.
-- Cell availability and load.
+This component will handle the network data used throughout the application.
 
-Users should be able to explore KPI distributions, compare cells, inspect historical trends and identify periods of poor performance.
+The initial pipeline will support structured files such as CSV.
 
-The results will be presented through interactive charts and tables.
+The processing workflow will include:
 
-### 4.3 Anomaly Detection
+1. Loading the source data.
+2. Checking the expected columns and data types.
+3. Identifying missing, duplicate and invalid records.
+4. Cleaning and transforming the data.
+5. Storing the processed measurements.
+6. Recording basic information about the dataset and ingestion process.
 
-This module will investigate how machine learning can identify unusual behaviour in network measurements.
+SQLite will be used initially to keep development simple. PostgreSQL can be introduced when the application requires more advanced database functionality or concurrent access.
 
-The initial work will focus on detecting abnormal KPI values and changes in network performance over time.
+FAISS will be used separately for local vector search in the document retrieval module.
 
-Different approaches will be compared, starting with simple statistical baselines and progressing to machine learning methods where useful.
+### 3.4 Analytics and Machine Learning
 
-The module should display detected anomalies, their scores and the measurements that contributed to the detection.
+The analytics layer will operate on the processed network measurements.
 
-Performance will be evaluated using labelled test data wherever possible.
+It will contain separate modules for:
 
-### 4.4 KPI Forecasting
+- KPI calculations and statistical summaries.
+- Cell-level and time-based comparisons.
+- Anomaly detection.
+- KPI forecasting.
+- Model evaluation.
 
-This module will explore whether historical network measurements can be used to predict future KPI values.
+Scikit-learn and XGBoost will be used for the initial machine learning experiments. PyTorch will be introduced where deep learning models are appropriate.
 
-The initial focus will be on forecasting selected indicators, such as throughput, SINR and cell load.
+The models will be developed and evaluated independently before being connected to the main application.
 
-The implementation will compare suitable forecasting methods against simple baseline approaches.
+### 3.5 Telecom Knowledge Retrieval
 
-Forecasts will be compared with actual measurements using standard error metrics. Prediction uncertainty will also be included where the chosen method supports it.
+The retrieval component will manage telecom documents and provide relevant information to the application.
 
-### 4.5 Telecom Document Search and RAG
+Its workflow will include:
 
-A separate module will handle telecom technical documentation.
+1. Loading technical documents.
+2. Extracting and cleaning their text.
+3. Splitting documents into searchable passages.
+4. Generating embeddings using Sentence Transformers.
+5. Building a vector index using FAISS.
+6. Implementing keyword retrieval using BM25.
+7. Combining retrieval results.
+8. Reranking the retrieved passages.
+9. Passing selected context to a language model.
 
-The document collection may include publicly accessible 3GPP specifications, ETSI documents, technical manuals and research publications.
+The generation component will use a configurable local language model where practical. Answers should include references to the documents and passages used.
 
-The system will support:
+### 3.6 Incident Investigation Agent
 
-- Document loading and text extraction.
-- Text cleaning and chunking.
-- Embedding generation.
-- Semantic search.
-- Keyword-based search.
-- Hybrid retrieval.
-- Reranking of retrieved passages.
-- Answer generation using a local language model.
-- References to the documents and passages used to generate an answer.
+The investigation agent will coordinate the different components when an engineer submits an incident.
 
-The quality of retrieval and generated answers will be evaluated using a prepared set of questions and relevant source documents.
+LangGraph will be considered for managing the workflow and its state.
 
-### 4.6 AI-Assisted Incident Investigation
+The agent will have access to controlled application tools, such as:
 
-This is one of the central features of the project.
+- Retrieve network measurements.
+- Calculate KPI summaries.
+- Compare cell performance.
+- Retrieve detected anomalies.
+- Generate or retrieve forecasts.
+- Search telecom documentation.
+- Run selected simulation experiments.
 
-An engineer should be able to submit an incident description, identify an affected cell and provide a relevant time period.
+The agent will use these tools to collect information before preparing its findings.
 
-The system will then collect information from the available modules. Depending on the incident, this may include:
+The output will contain the incident summary, observed evidence, possible explanations, supporting references and suggested next steps.
 
-1. Retrieving the relevant network measurements.
-2. Checking data quality and KPI trends.
-3. Looking for detected anomalies.
-4. Comparing the affected cell with historical or neighbouring cell measurements.
-5. Retrieving relevant technical documentation.
-6. Generating possible explanations for the observed behaviour.
-7. Collecting additional evidence through controlled investigation tools.
-8. Producing a structured investigation report.
+The agent will not directly modify network configurations or control live network equipment.
 
-LangGraph will be considered for managing the multi-step investigation workflow.
+### 3.7 Simulation and 5G NR Experiments
 
-The system is intended to assist engineers, not replace their judgement. It must distinguish between directly observed measurements, possible explanations and confirmed causes. A low SINR value, for example, should not automatically be treated as proof of interference.
+This component will contain independent experiments for selected wireless network scenarios.
 
-### 4.7 5G NR Research and Experiments
+It will support work on beamforming, interference, scheduling, cell association and backhaul delay.
 
-This module will focus on selected wireless communication problems that can be studied through data analysis and simulation.
+The simulation code will be separated from the general analytics and AI components. This will allow experiments to be run and evaluated without depending on the complete application.
 
-Planned topics include:
+Where relevant, experiment results can later be made available to the investigation workflow.
 
-- Radio signal and interference analysis.
-- Beamforming and antenna configuration.
-- Radio resource scheduling.
-- Cell association and load balancing.
-- Coordinated beamforming.
-- Prediction-assisted scheduling.
-- The effect of backhaul delay on network performance.
+### 3.8 Evaluation and Monitoring
 
-The implementation will use independently generated or publicly available data. Experiments will be documented with their assumptions, configurations and results.
+Evaluation will be implemented as a separate part of the project.
 
-### 4.8 Network Simulation
+It will measure:
 
-The project will include a simplified simulation environment for studying selected network scenarios.
+- Data processing quality.
+- Anomaly detection performance.
+- Forecasting errors.
+- Retrieval quality.
+- RAG answer quality and citation correctness.
+- Incident investigation performance.
+- Application latency and reliability.
 
-Users should be able to change certain parameters and examine how those changes affect simulated network performance.
+Evaluation scripts should be runnable independently so that model improvements can be compared against earlier baselines.
 
-Possible experiments include changes in cell load, interference conditions, scheduling decisions and backhaul delay.
+## 4. Data Flow
 
-These simulations will be designed for experimentation and comparison. They will not be presented as complete or fully accurate models of commercial 5G networks.
+The main data flow will follow this sequence:
 
-### 4.9 Evaluation and Reporting
+1. Network measurements and technical documents are imported.
+2. Measurements are validated, transformed and stored.
+3. Processed network data becomes available to the analytics modules.
+4. The analytics modules calculate KPIs, detect anomalies and generate forecasts.
+5. Technical documents are processed and indexed for retrieval.
+6. An engineer submits an incident through the application.
+7. The investigation workflow retrieves relevant measurements, analytical results and technical information.
+8. The agent collects evidence and prepares possible explanations.
+9. The application displays the findings and allows the engineer to review them.
+10. The investigation can be exported as a report.
 
-Each major component should have its own evaluation procedure.
+Not every incident will require every component. The investigation workflow should select the tools relevant to the problem.
 
-The application should also be able to produce structured reports containing relevant measurements, model outputs, retrieved references and investigation findings.
+## 5. Main Incident Investigation Workflow
 
-Evaluation results should be reproducible, and the methods used to obtain them should be documented.
+An example investigation could start with an alert about declining throughput in a particular cell.
 
-## 5. Non-Functional Requirements
+The system would:
 
-### Code Organisation
+1. Identify the affected cell and time period.
+2. Retrieve the corresponding measurements.
+3. Check whether the available data is complete and valid.
+4. Examine throughput, SINR, BLER, PRB utilisation and other relevant KPIs.
+5. Compare the affected cell with its historical performance and neighbouring cells where data is available.
+6. Check whether the anomaly detection module has identified unusual behaviour.
+7. Search technical documentation for relevant explanations.
+8. Collect additional evidence through available investigation tools.
+9. Rank possible explanations according to the evidence.
+10. Generate a report for engineering review.
 
-The code should be organised into separate modules with clearly defined responsibilities. Data processing, model logic, retrieval and application interfaces should not be mixed together unnecessarily.
+The system should not claim that a particular issue is the confirmed root cause unless the available evidence supports that conclusion.
 
-### Reproducibility
+## 6. Proposed Backend Structure
 
-Experiments should use documented configurations and fixed random seeds where appropriate. Evaluation results should be reproducible.
+The backend will be organised into separate Python packages.
 
-### Performance
-
-The system should run on commonly available hardware where practical. Models and datasets should be selected with local resource limitations in mind.
-
-### Reliability
-
-Input validation and error handling should be included in the main workflows. Important functions should have automated tests.
-
-### Security
-
-API keys, passwords and other credentials must not be committed to the public repository. Uploaded files and external inputs should be validated.
-
-### Maintainability
-
-Dependencies, setup instructions, code structure and important implementation decisions should be documented.
-
-### Cost
-
-The project should be built using free and open-source tools. Paid APIs and subscriptions must not be required for the core functionality.
-
-### Usability
-
-The application should provide an accessible interface through Streamlit.
-
-## 6. Technology Choices
-
-The initial technology choices are:
-
-| Area | Technology |
+| Module | Responsibility |
 |---|---|
-| Programming language | Python |
-| Data processing | Pandas, NumPy |
-| Database | SQLite initially, PostgreSQL where needed |
-| Backend | FastAPI |
-| User interface | Streamlit |
-| Visualisation | Plotly |
-| Machine learning | Scikit-learn, XGBoost |
-| Deep learning | PyTorch |
-| Embeddings | Sentence Transformers |
-| Vector search | FAISS |
-| Keyword retrieval | BM25 |
-| RAG and agent workflows | LangChain, LangGraph |
-| Local language models | Ollama |
-| Testing | Pytest |
-| Containerisation | Docker |
-| Version control | Git and GitHub |
+| ingestion | Importing network measurements and documents |
+| data_quality | Data validation and cleaning |
+| kpi_analytics | KPI calculations and analysis |
+| anomaly_detection | Detecting unusual network behaviour |
+| forecasting | Predicting selected network KPIs |
+| retrieval | Document indexing and search |
+| embeddings | Generating document embeddings |
+| reranking | Ranking retrieved passages |
+| generation | Language model interaction |
+| agents | Investigation workflow |
+| diagnosis | Incident analysis and reporting |
+| simulation | Network experiments |
+| evaluation | Model and system evaluation |
+| reporting | Generating investigation reports |
 
-These are initial choices rather than fixed requirements. If a simpler or more suitable alternative becomes apparent during development, the decision will be documented.
+The modules will be developed independently and connected through application services.
 
-## 7. Data Sources
+## 7. Database and Storage Design
 
-The project will use two types of data:
+The initial database will store the information needed for the core application.
 
-**Public data:** Publicly accessible wireless network measurements, technical specifications, research papers and other relevant telecom resources.
+The main entities are expected to include:
 
-**Synthetic data:** Generated network measurements and incident scenarios for testing the application, training selected models and evaluating the investigation workflow.
+- **Dataset:** Information about imported datasets.
+- **Cell:** Cell identifiers and available configuration information.
+- **Measurement:** Time-based network KPI measurements.
+- **Incident:** Submitted incident descriptions and affected cells.
+- **Anomaly:** Detected abnormal observations.
+- **Forecast:** Model predictions and their associated time periods.
+- **Investigation:** Investigation status and summary.
+- **Evidence:** Measurements, retrieved passages and other information used during an investigation.
+- **Document:** Metadata about indexed telecom documents.
 
-The source, licence and limitations of each dataset will be recorded. Synthetic data will be clearly labelled and will not be presented as real operator measurements.
+The exact database schema and relationships will be defined separately in the data design document.
 
-No confidential Huawei data, internal source code or restricted company material will be included.
+Document files, model artefacts and vector indexes may be stored separately from the relational database.
 
-## 8. Evaluation Plan
+## 8. API Design
 
-Each major component will have its own evaluation procedure.
+FastAPI will expose endpoints for the main application operations.
 
-| Component | Evaluation metrics |
+The initial endpoint groups are:
+
+| Endpoint | Purpose |
 |---|---|
-| Data processing | Validation results, processing time, invalid record rate |
-| Anomaly detection | Precision, recall, F1-score |
-| KPI forecasting | MAE, RMSE |
-| Document retrieval | Recall@K, MRR, nDCG |
-| RAG | Faithfulness, answer relevance, citation correctness |
-| Incident investigation | Top-1/Top-3 accuracy, evidence coverage |
-| Agent workflow | Task completion rate, tool failure rate |
-| Application | Response time, reliability, test results |
+| `/health` | Check application status |
+| `/datasets` | Upload and list datasets |
+| `/measurements` | Retrieve network measurements |
+| `/kpis` | Calculate and retrieve KPI summaries |
+| `/anomalies` | Run or retrieve anomaly detection results |
+| `/forecasts` | Generate KPI forecasts |
+| `/documents` | Upload and manage documents |
+| `/search` | Search telecom documentation |
+| `/incidents` | Create and retrieve incidents |
+| `/investigations` | Start and retrieve investigations |
+| `/reports` | Generate investigation reports |
 
-Where possible, improved methods will be compared against simpler baselines. Results will be reported only after experiments have actually been performed.
+Request formats, response structures and error handling will be specified when these endpoints are implemented.
 
-## 9. Scope and Limitations
+## 9. Development and Deployment Environment
 
-The project will focus on analysis, experimentation and decision support.
+The project will be developed using Python and Google Colab where appropriate.
 
-It will not:
+GitHub will be the central repository for source code, notebooks, documentation, tests and experiment configurations.
 
-- Control or modify a live commercial mobile network.
-- Make automatic changes to network configurations.
-- Use confidential operator datasets.
-- Attempt to reproduce a complete commercial 5G network simulator.
-- Depend on paid LLM APIs for its main functionality.
+The intended application environment will use:
 
-The AI-generated investigation results will be treated as recommendations that require engineering review.
+- Streamlit for the interface.
+- FastAPI for backend services.
+- SQLite initially, with PostgreSQL as a possible later addition.
+- Local model inference through Ollama where supported.
+- Docker for packaging and reproducible execution.
 
-## 10. Expected Outcome
+The public demonstration will use free hosting where feasible. Since free hosting environments have resource limitations, some computationally expensive models may need to run locally, while the hosted application can demonstrate selected functionality using lightweight models or precomputed results.
 
-The final outcome will be a Python-based application that brings together network data processing, KPI analytics, machine learning, telecom document retrieval and AI-assisted incident investigation.
+## 10. Testing Strategy
 
-The project will be hosted on GitHub with source code, technical documentation, experiments and evaluation results. A Streamlit interface will provide a way to demonstrate the main functionality.
+Each module will have its own tests.
 
-The focus throughout development will be on making the individual components work together, documenting the implementation and measuring how well the system performs.
+The testing process will include:
+
+- Unit tests for individual functions.
+- Data validation tests.
+- Integration tests between application modules.
+- API tests.
+- Retrieval and generation evaluation.
+- End-to-end tests for the incident investigation workflow.
+
+Pytest will be used as the main testing framework.
+
+The goal is to catch problems at the module level before integrating everything into the application.
+
+## 11. Architecture Decisions
+
+The architecture will be kept simple during the initial development stages.
+
+A modular monolithic application will be used instead of starting with microservices. This avoids unnecessary deployment and maintenance complexity for a single-developer project.
+
+Streamlit and FastAPI will have separate responsibilities, while the core business logic will remain in reusable Python modules.
+
+SQLite will be preferred initially because it requires little setup. More advanced infrastructure will only be introduced when there is a clear need.
+
+Local and open-source models will be preferred to avoid dependence on paid APIs.
+
+These decisions can be revised as the project develops. Significant changes will be recorded with their reasons and trade-offs.
+
+## 12. Known Limitations
+
+The initial version will use public and synthetic datasets rather than live operator network data.
+
+The quality of anomaly detection, forecasting and incident investigation will depend on the available data and evaluation scenarios.
+
+The network simulation component will represent selected wireless behaviours rather than a complete commercial network.
+
+Local language model performance will depend on available hardware and model size.
+
+These limitations will be considered when evaluating and presenting the results.
