@@ -322,4 +322,123 @@ An engineer should be able to:
 - Open supporting technical documents.
 - Review the suggested explanations.
 - Mark a hypothesis as useful or incorrect.
-- Add investigation
+- Add investigation notes.
+- Record the actual confirmed cause when it becomes available.
+
+Feedback may later be used to improve the diagnostic workflow and build a labelled evaluation dataset.
+
+The system will remain advisory. It will not automatically modify network parameters or issue live network control commands.
+
+## 10. Error Handling and Safety
+
+The investigation workflow should handle incomplete data and tool failures.
+
+Examples:
+
+| Situation | Expected behaviour |
+|---|---|
+| Unknown cell identifier | Request clarification or report the issue |
+| Missing measurements | Explain which data is unavailable |
+| Insufficient historical data | Skip historical comparison |
+| RAG retrieval failure | Continue with available analytical evidence |
+| Forecasting failure | Continue without forecast results |
+| Conflicting evidence | Report the disagreement |
+| Agent cannot identify a plausible explanation | State that the cause remains unknown |
+
+The agent should not fabricate measurements, document references or tool results.
+
+Tool calls should use validated arguments and have appropriate limits on the requested time range and amount of data.
+
+## 11. Proposed Python Module Structure
+
+```text
+src/
+└── ran_intelligence/
+    └── agents/
+        ├── __init__.py
+        ├── state.py
+        ├── tools.py
+        ├── prompts.py
+        ├── workflow.py
+        ├── investigation.py
+        ├── hypothesis.py
+        └── report.py
+```
+
+Responsibilities:
+
+- `state.py`: Define the shared investigation state.
+- `tools.py`: Define controlled tools for analytics and retrieval.
+- `prompts.py`: Store prompts used by the agent.
+- `workflow.py`: Define the LangGraph workflow.
+- `investigation.py`: Start and manage investigations.
+- `hypothesis.py`: Assess and rank candidate explanations.
+- `report.py`: Generate structured investigation reports.
+
+The structure may change as the workflow becomes more detailed.
+
+## 12. Evaluation
+
+The agent will be evaluated using controlled incident scenarios.
+
+Synthetic data will be particularly useful because we can generate incidents with known underlying causes.
+
+The evaluation should examine:
+
+- Whether the agent identifies the affected cell correctly.
+- Whether it retrieves the correct time window.
+- Whether it calls the appropriate analytical tools.
+- Whether its findings match the tool outputs.
+- Whether its hypotheses are supported by evidence.
+- Whether it avoids claiming unsupported causes.
+- Whether citations point to the correct documents.
+- Whether the final report contains all important findings.
+- Whether the workflow handles missing data and tool failures.
+
+We should also measure execution time, number of tool calls and failure rate.
+
+A successful tool execution does not necessarily mean the diagnosis is correct. These should be evaluated separately.
+
+## 13. Implementation Order
+
+The agent will be developed incrementally.
+
+**Stage 1 — Define the investigation state**
+
+Create the structured state and incident input format.
+
+**Stage 2 — Implement analytical tools**
+
+Connect KPI analytics, anomaly detection and historical comparison.
+
+**Stage 3 — Connect RAG**
+
+Allow the agent to retrieve technical documentation and supporting passages.
+
+**Stage 4 — Build the LangGraph workflow**
+
+Implement the investigation stages and conditional transitions.
+
+**Stage 5 — Add hypothesis assessment**
+
+Generate and rank candidate explanations using collected evidence.
+
+**Stage 6 — Generate reports**
+
+Produce structured reports with evidence, citations and uncertainty.
+
+**Stage 7 — Add human review**
+
+Allow engineers to inspect findings and record feedback.
+
+**Stage 8 — Evaluate the workflow**
+
+Test the agent against synthetic incidents with known causes and record its performance.
+
+## 14. Expected Outcome
+
+The incident investigation agent should provide a structured way to investigate network performance problems.
+
+An engineer should be able to submit an incident request and receive an investigation report containing relevant measurements, anomaly results, technical references and plausible explanations.
+
+The main objective is to reduce the amount of manual searching and analysis required while keeping the engineer in control of the final diagnosis and any operational decision.
