@@ -1,4 +1,4 @@
-# RAN Intelligence Platform — Project Requirements
+# RAN Intelligence Platform : Project Requirements
 
 ## 1. Project Overview
 
