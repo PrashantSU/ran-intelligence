@@ -238,4 +238,131 @@ The result should contain:
 
 The system should retain enough information to reproduce the detection result.
 
-Anomaly severity should not be confused with
+Anomaly severity should not be confused with model confidence. These are separate concepts and may need separate fields in later versions.
+
+## 7. Evaluation
+
+Anomaly detection is difficult to evaluate when the dataset does not contain ground-truth incident labels.
+
+We will use different evaluation approaches depending on the available data.
+
+### 7.1 Labelled Synthetic Data
+
+Synthetic scenarios will provide known normal and anomalous periods.
+
+This allows us to calculate:
+
+- Precision.
+- Recall.
+- F1-score.
+- False positive rate.
+- Detection delay.
+
+We can also evaluate whether the detector identifies the correct time window and affected cell.
+
+### 7.2 Public Measurements
+
+For public datasets without reliable incident labels, evaluation will focus on:
+
+- Whether detected anomalies correspond to unusual measurement patterns.
+- Whether results are consistent across repeated runs.
+- Whether the detector produces excessive false alarms.
+- Whether detected periods can be explained using other available KPIs.
+
+These results should not be presented as supervised classification accuracy.
+
+### 7.3 Model Comparison
+
+We will compare methods using the same evaluation data and preprocessing.
+
+Initial comparison:
+
+| Method | Main advantage | Limitation |
+|---|---|---|
+| Fixed thresholds | Simple and interpretable | Requires suitable thresholds |
+| Z-score | Easy statistical baseline | Sensitive to distribution changes |
+| IQR | More robust to some outliers | Does not capture complex patterns |
+| Isolation Forest | Handles multivariate features | Scores may be difficult to interpret |
+| Local Outlier Factor | Detects local density deviations | Sensitive to neighbourhood settings |
+| Rolling statistics | Useful for time-dependent behaviour | May struggle with complex patterns |
+
+The best method will depend on the type of anomaly and the available measurements.
+
+## 8. Integration with Incident Investigation
+
+Anomaly detection will provide evidence to the incident investigation component.
+
+For example, if the system detects a period of reduced throughput, the investigation workflow may:
+
+1. Retrieve the affected cell and time window.
+2. Examine SINR, RSRP and BLER trends.
+3. Compare the cell with neighbouring cells, if available.
+4. Check resource utilisation.
+5. Retrieve relevant technical documentation.
+6. Rank possible explanations based on the available evidence.
+
+The anomaly detector should not decide the root cause by itself.
+
+Its responsibility is to identify unusual behaviour and provide evidence for further analysis.
+
+## 9. Proposed Python Module Structure
+
+```text
+src/
+└── ran_intelligence/
+    └── anomaly_detection/
+        ├── __init__.py
+        ├── preprocessing.py
+        ├── statistical.py
+        ├── isolation_forest.py
+        ├── local_outlier_factor.py
+        ├── time_series.py
+        ├── scoring.py
+        └── evaluation.py
+```
+
+Responsibilities:
+
+- `preprocessing.py`: Prepare features for detection.
+- `statistical.py`: Implement threshold, Z-score and IQR methods.
+- `isolation_forest.py`: Train and apply Isolation Forest.
+- `local_outlier_factor.py`: Implement LOF experiments.
+- `time_series.py`: Apply time-dependent detection methods.
+- `scoring.py`: Convert model outputs into structured anomaly results.
+- `evaluation.py`: Evaluate and compare detection methods.
+
+## 10. Implementation Order
+
+The implementation will proceed in the following order:
+
+**Stage 1 — Statistical baselines**
+
+Implement threshold-based detection, Z-score and IQR.
+
+**Stage 2 — Feature engineering**
+
+Create rolling statistics, KPI changes and cell-level features.
+
+**Stage 3 — Isolation Forest**
+
+Train an unsupervised model and inspect its anomaly scores.
+
+**Stage 4 — Time-series detection**
+
+Add methods for identifying persistent and gradual KPI degradation.
+
+**Stage 5 — Evaluation**
+
+Compare methods using synthetic scenarios with known labels.
+
+**Stage 6 — Integration**
+
+Expose anomaly results to the Streamlit dashboard and incident investigation workflow.
+
+## 11. Expected Outcome
+
+The anomaly detection component should identify unusual network measurements and periods of potential performance degradation.
+
+Engineers should be able to see what was detected, when it occurred, which KPIs were affected and which method identified it.
+
+The component should provide useful evidence for further investigation without presenting an anomaly as a confirmed network fault.
