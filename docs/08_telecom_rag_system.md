@@ -305,4 +305,193 @@ The generation prompt should instruct the model to:
 - Avoid inventing technical requirements.
 - Preserve important technical terminology.
 - Distinguish facts from interpretation.
-- State when the retrieved documents do not contain enough
+- State when the retrieved documents do not contain enough information.
+- Include references to supporting passages.
+- Avoid presenting unsupported conclusions as facts.
+
+The model should not claim that a specification requires something unless the retrieved source supports that statement.
+
+If the retrieval results are insufficient, the system should say so rather than produce a confident but unsupported answer.
+
+## 13. Citation Generation
+
+Citations are an important part of the platform.
+
+Each generated answer should link its statements to the documents and sections used to produce it.
+
+A citation should include, where available:
+
+- Document title.
+- Publisher.
+- Version.
+- Section.
+- Page number.
+- Source URL.
+
+The application should allow the engineer to inspect the supporting passage.
+
+Citation generation must be based on retrieved metadata. The language model should not invent document names, page numbers or specification references.
+
+## 14. Local Language Model
+
+The project should not depend on paid model APIs.
+
+We will initially investigate locally runnable open-weight models using Ollama or other suitable inference tools.
+
+Model selection will consider:
+
+- Available memory.
+- Hardware requirements.
+- Response quality.
+- Inference speed.
+- Context length.
+- Licence and usage conditions.
+
+Google Colab may be used for experiments that require more GPU memory.
+
+The architecture should keep the generation model separate from the retrieval implementation. This will make it possible to replace the model without rebuilding the complete RAG system.
+
+If local generation is unavailable, the retrieval component should still work and return relevant passages without generating an answer.
+
+## 15. RAG Evaluation
+
+The RAG system will be evaluated at both retrieval and generation stages.
+
+### 15.1 Retrieval Evaluation
+
+We will create a small question-and-relevant-document benchmark.
+
+The initial metrics will include:
+
+| Metric | Purpose |
+|---|---|
+| Precision@K | Measures how many retrieved results are relevant |
+| Recall@K | Measures how many relevant results are retrieved |
+| MRR | Measures the position of the first relevant result |
+| nDCG@K | Evaluates ranking quality using relevance grades |
+
+These metrics will help compare dense retrieval, BM25, hybrid retrieval and reranking.
+
+### 15.2 Generation Evaluation
+
+Generated answers should be checked for:
+
+- Correctness against the retrieved context.
+- Relevance to the question.
+- Faithfulness to source documents.
+- Citation correctness.
+- Unsupported statements.
+- Appropriate handling of insufficient evidence.
+
+A correct-looking answer is not necessarily grounded in the retrieved documents.
+
+### 15.3 Evaluation Dataset
+
+We will build a small benchmark of telecom questions.
+
+It should include:
+
+- Basic factual questions.
+- Questions about 5G NR procedures.
+- Questions involving technical terminology.
+- Questions requiring information from multiple sections.
+- Questions where the available documents do not contain the answer.
+
+The expected supporting documents and passages should be recorded for evaluation.
+
+## 16. Proposed Python Module Structure
+
+```text
+src/
+└── ran_intelligence/
+    └── retrieval/
+        ├── __init__.py
+        ├── document_loader.py
+        ├── text_extraction.py
+        ├── chunking.py
+        ├── metadata.py
+        ├── embeddings.py
+        ├── vector_store.py
+        ├── bm25.py
+        ├── hybrid_search.py
+        ├── reranking.py
+        ├── query_processing.py
+        ├── generation.py
+        └── citations.py
+```
+
+Responsibilities:
+
+- `document_loader.py`: Load supported document formats.
+- `text_extraction.py`: Extract text and page information.
+- `chunking.py`: Split documents into retrieval chunks.
+- `metadata.py`: Manage document and chunk metadata.
+- `embeddings.py`: Generate text embeddings.
+- `vector_store.py`: Manage FAISS indexes.
+- `bm25.py`: Implement keyword retrieval.
+- `hybrid_search.py`: Combine retrieval results.
+- `reranking.py`: Rerank candidate passages.
+- `query_processing.py`: Prepare and rewrite queries.
+- `generation.py`: Generate answers from retrieved context.
+- `citations.py`: Format source references.
+
+The implementation structure may change as we build and test the system.
+
+## 17. Implementation Order
+
+**Stage 1 — Document ingestion**
+
+- Select a small collection of telecom documents.
+- Load PDFs and extract text.
+- Preserve page and section information where possible.
+- Create document metadata.
+
+**Stage 2 — Chunking and embeddings**
+
+- Implement chunking.
+- Generate embeddings using Sentence Transformers.
+- Store embeddings and metadata.
+
+**Stage 3 — Basic retrieval**
+
+- Implement FAISS similarity search.
+- Test retrieval using sample telecom questions.
+
+**Stage 4 — Hybrid retrieval**
+
+- Add BM25.
+- Combine results using RRF.
+- Compare dense, sparse and hybrid retrieval.
+
+**Stage 5 — Reranking**
+
+- Add a cross-encoder reranker.
+- Measure its effect on retrieval quality and latency.
+
+**Stage 6 — Answer generation**
+
+- Connect a locally runnable language model.
+- Generate answers using retrieved context.
+- Add source citations and insufficient-evidence handling.
+
+**Stage 7 — Evaluation**
+
+- Build a question benchmark.
+- Evaluate retrieval and generation separately.
+- Record results and compare configurations.
+
+**Stage 8 — Application integration**
+
+- Expose RAG functionality through the backend.
+- Add a document question-answering interface in Streamlit.
+- Display retrieved passages and citations.
+
+## 18. Expected Outcome
+
+The Telecom RAG system should allow engineers to search technical documentation and ask questions about 4G and 5G network technologies.
+
+Answers should be grounded in retrieved documents, with references that allow users to inspect the original technical material.
+
+The first version will focus on reliable document ingestion, retrieval and citations. More advanced query processing, reranking and generation will be added and evaluated incrementally.
+
+The system should remain useful even when a language model is unavailable, because retrieving the correct technical information is the foundation of the entire component.
