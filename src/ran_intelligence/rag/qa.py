@@ -26,10 +26,8 @@ def answer_telecom_question(
 
     if not query or not query.strip():
         raise ValueError("query must not be empty")
-
     if top_k < 1 or candidate_k < 1:
         raise ValueError("top_k and candidate_k must be positive")
-
     if context_window < 0:
         raise ValueError("context_window must be non-negative")
 
@@ -52,6 +50,14 @@ def answer_telecom_question(
         retrieval_method = "hybrid_reranked"
 
     if not documents:
+        empty_citations = {
+            "valid": False,
+            "used": [],
+            "invalid": [],
+            "uncited": True,
+            "used_sources": [],
+            "invalid_sources": [],
+        }
         return {
             "question": query,
             "answer": (
@@ -59,12 +65,8 @@ def answer_telecom_question(
                 "telecom documents to answer this question."
             ),
             "sources": [],
-            "citations": {
-                "valid": False,
-                "used": [],
-                "invalid": [],
-                "uncited": True,
-            },
+            "citations": empty_citations,
+            "citation_validation": empty_citations,
             "status": "insufficient_evidence",
             "retrieval_method": retrieval_method,
             "retrieved_count": 0,
@@ -72,13 +74,27 @@ def answer_telecom_question(
             "model": None,
         }
 
-    expanded_documents = expand_adjacent_chunks(
-        documents=documents,
-        all_documents=index["documents"],
-        window=context_window,
+    all_documents = index.get("documents") or documents
+
+    # Adjacent expansion requires stable chunk identifiers. If they are
+    # unavailable, retain the retrieved evidence without expanding it.
+    can_expand = all(
+        document.get("chunk_id") is not None
+        for document in documents
+    ) and all(
+        document.get("chunk_id") is not None
+        for document in all_documents
     )
 
-    # Preserve original retrieval ranking before adding neighbouring passages.
+    if context_window > 0 and can_expand:
+        expanded_documents = expand_adjacent_chunks(
+            documents=documents,
+            all_documents=all_documents,
+            window=context_window,
+        )
+    else:
+        expanded_documents = list(documents)
+
     expanded_documents.sort(
         key=lambda document: (
             document.get("retrieval_rank") is None,
@@ -100,9 +116,18 @@ def answer_telecom_question(
         max_context_chars=max_context_chars,
     )
 
+    citations = result.get(
+        "citations",
+        result.get("citation_validation", {}),
+    )
+    if not isinstance(citations, dict):
+        citations = {}
+
+    result["citations"] = citations
+    result["citation_validation"] = citations
     result["status"] = _classify_qa_status(
         result.get("answer", ""),
-        result.get("citations", {}),
+        citations,
     )
     result["retrieval_method"] = retrieval_method
     result["retrieved_count"] = len(documents)
@@ -112,20 +137,16 @@ def answer_telecom_question(
 
 
 def _classify_qa_status(answer: str, citations: dict) -> str:
-    """Classify answer completeness using citation validity and explicit abstention."""
-    if not isinstance(citations, dict):
-        citations = {}
+    """Classify answer status from citation validity and explicit abstention."""
+    invalid = citations.get("invalid", citations.get("invalid_sources", []))
+    used = citations.get("used", citations.get("used_sources", []))
 
-    invalid_sources = citations.get("invalid_sources", [])
-    used_sources = citations.get("used_sources", [])
-
-    if invalid_sources:
+    if invalid:
         return "invalid_citations"
-    if not used_sources:
+    if not used:
         return "uncited"
 
-    text = (answer or "").strip().lower()
-    text = text.lstrip("-*# ").strip()
+    text = (answer or "").strip().lower().lstrip("-*# ").strip()
 
     abstention_openers = (
         "insufficient evidence",

@@ -1,81 +1,80 @@
+
 import re
-from collections import defaultdict
 from typing import Any
 
 CITATION_PATTERN = re.compile(r"\[S(\d+)\]")
-
-
-
 
 
 def build_evidence_context(
     documents: list[dict[str, Any]],
     max_context_chars: int = 5000,
 ) -> tuple[str, list[dict[str, Any]]]:
-    """Prioritise all retrieval seeds before adjacent context chunks."""
+    """Build a source-labelled evidence context within a character limit."""
+    if not documents:
+        raise ValueError("documents must not be empty")
     if max_context_chars < 1:
         raise ValueError("max_context_chars must be positive")
 
-    candidates = []
+    items = []
     seed_positions = {}
 
     for position, document in enumerate(documents):
-        metadata = document.get("metadata", {})
-        rank = document.get("context_group_rank")
-        if rank is None:
-            rank = document.get("retrieval_rank")
-        if rank is None:
-            rank = 999999
+        text = str(document.get("text", "")).strip()
+        if not text:
+            continue
 
-        group = (metadata.get("source", "Unknown source"), rank)
-        expanded = document.get("is_context_expansion", False)
+        source = document.get("source") or document.get("metadata", {}).get(
+            "source", "unknown"
+        )
+        page = document.get("page")
+        if page is None:
+            page = document.get("metadata", {}).get("page", "unknown")
 
-        if not expanded:
-            seed_positions[group] = position
+        chunk_index = document.get("chunk_index")
+        if chunk_index is None:
+            chunk_index = document.get("metadata", {}).get(
+                "chunk_index", position
+            )
 
-        candidates.append({
-            "document": document,
-            "position": position,
+        group = document.get("group", position)
+        rank = document.get("rank", position + 1)
+
+        item = {
+            "text": text,
+            "source": source,
+            "page": page,
+            "chunk_index": chunk_index,
+            "chunk_id": document.get("chunk_id"),
             "group": group,
             "rank": rank,
-            "expanded": expanded,
-            "source": metadata.get("source", "Unknown source"),
-            "page": metadata.get("page", "Unknown"),
-            "chunk_index": metadata.get("chunk_index", position),
-        })
+            "position": position,
+        }
+        items.append(item)
 
-    def priority(item):
-        if not item["expanded"]:
-            return (0, item["rank"], item["position"])
+        if document.get("is_seed", True):
+            seed_positions.setdefault(group, position)
 
+    def sort_key(item):
         seed_position = seed_positions.get(item["group"])
-
         if seed_position is not None and item["position"] > seed_position:
             return (1, item["rank"], item["position"])
+        return (0, item["rank"], item["position"])
 
-        return (2, item["rank"], item["position"])
-
-    candidates.sort(key=priority)
+    items.sort(key=sort_key)
 
     context_parts = []
     sources = []
-    used_chars = 0
     seen_chunks = set()
+    used_chars = 0
 
-    for item in candidates:
-        document = item["document"]
-        chunk_id = document.get("chunk_id")
-
+    for item in items:
+        chunk_id = item["chunk_id"]
         if chunk_id is not None and chunk_id in seen_chunks:
-            continue
-
-        text = document.get("text", "").strip()
-        if not text:
             continue
 
         source_id = f"S{len(sources) + 1}"
         header = f"[{source_id}: {item['source']}, page {item['page']}]"
-        passage = header + chr(10) + text
+        passage = header + "\n" + item["text"]
 
         extra_chars = len(passage) + (2 if context_parts else 0)
         if used_chars + extra_chars > max_context_chars:
@@ -83,44 +82,49 @@ def build_evidence_context(
 
         context_parts.append(passage)
         sources.append({
+            "id": source_id,
             "source_id": source_id,
             "source": item["source"],
+            "page": item["page"],
             "pages": [item["page"]],
             "chunk_index": item["chunk_index"],
         })
-        used_chars += extra_chars
 
+        used_chars += extra_chars
         if chunk_id is not None:
             seen_chunks.add(chunk_id)
 
-    return (chr(10) * 2).join(context_parts), sources
+    if not context_parts:
+        raise ValueError("No usable text found in the supplied documents")
+
+    return "\n\n".join(context_parts), sources
 
 
-def build_generation_prompt(
-    query: str,
-    evidence_context: str,
-) -> str:
-    """Build an exhaustive, grounded telecom question-answering prompt."""
+def build_generation_prompt(query: str, evidence_context: str) -> str:
+    """Build a complete, grounded telecom question-answering prompt."""
+    if not query or not query.strip():
+        raise ValueError("query must not be empty")
+
     return f"""You are a technical assistant specialising in 4G and 5G NR.
 
 Answer the question using only the supplied evidence.
 
 Rules:
-1. Do not introduce facts that are not supported by the evidence.
-2. Review ALL evidence passages before composing your answer.
-3. For list questions, identify EVERY distinct item explicitly supported
-   by the evidence. Do not omit an item merely because it appears in a
-   later passage or under a separate heading.
+1. Do not add facts that are not supported by the evidence.
+2. Review all evidence passages before composing your answer.
+3. For list questions, identify every distinct item explicitly supported
+   by the evidence. Do not omit items appearing in later passages or
+   under separate headings.
 4. Organise the answer using the categories and directions requested.
 5. Distinguish physical channels, transport channels, logical channels,
    and physical signals. They are different categories.
-6. When asked for physical channels, list only items explicitly identified
-   as physical channels in the evidence.
+6. When asked for physical channels, list only items explicitly
+   identified as physical channels in the evidence.
 7. Do not infer physical channels from mappings between logical and
    transport channels.
 8. Cite each factual item using its supporting source, such as [S1].
-9. Before finalising, check that every relevant item found across ALL
-   evidence passages appears in the answer.
+9. Check that every relevant item found across the evidence appears
+   in the answer.
 10. If the evidence is incomplete or contradictory, explain the limitation.
 11. Be concise, but never sacrifice completeness for brevity.
 
@@ -132,38 +136,39 @@ Question:
 
 Answer:"""
 
+
 def validate_answer_citations(
     answer: str,
     sources: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Check whether citations refer to supplied evidence labels."""
-    used = sorted(
-        {int(match) for match in CITATION_PATTERN.findall(answer)}
-    )
-    available = {
-        int(source["source_id"][1:])
-        for source in sources
-        if source.get("source_id", "").startswith("S")
-        and source["source_id"][1:].isdigit()
-    }
+    """Validate answer citations against the supplied evidence labels."""
+    used_numbers = sorted({
+        int(match) for match in CITATION_PATTERN.findall(answer or "")
+    })
 
-    invalid = sorted(set(used) - available)
+    available = set()
+    for source in sources:
+        source_id = source.get("source_id") or source.get("id", "")
+        if (
+            isinstance(source_id, str)
+            and source_id.startswith("S")
+            and source_id[1:].isdigit()
+        ):
+            available.add(int(source_id[1:]))
+
+    invalid_numbers = sorted(set(used_numbers) - available)
+    used = [f"S{number}" for number in used_numbers]
+    invalid = [f"S{number}" for number in invalid_numbers]
+    uncited = not used
 
     return {
         "valid": bool(used) and not invalid,
-        "used_sources": [f"S{number}" for number in used],
-        "invalid_sources": [f"S{number}" for number in invalid],
+        "used": used,
+        "invalid": invalid,
+        "uncited": uncited,
+        "used_sources": used,
+        "invalid_sources": invalid,
     }
-
-
-def _count_input_tokens(tokenizer: Any, prompt: str) -> int:
-    """Count prompt tokens without adding special tokens twice."""
-    encoded = tokenizer(
-        prompt,
-        add_special_tokens=False,
-        return_tensors="pt",
-    )
-    return encoded["input_ids"].shape[-1]
 
 
 def generate_grounded_answer(
@@ -173,7 +178,7 @@ def generate_grounded_answer(
     model: Any,
     device: str | None = None,
     max_input_tokens: int = 2048,
-    max_new_tokens: int = 180,
+    max_new_tokens: int = 360,
     max_context_chars: int = 5000,
 ) -> dict[str, Any]:
     """Generate an answer grounded in retrieved telecom evidence."""
@@ -187,84 +192,92 @@ def generate_grounded_answer(
             "question": query,
             "answer": "Insufficient evidence to answer the question.",
             "sources": [],
+            "citations": {
+                "valid": False,
+                "used": [],
+                "invalid": [],
+                "uncited": True,
+                "used_sources": [],
+                "invalid_sources": [],
+            },
+            "citation_validation": {
+                "valid": False,
+                "used": [],
+                "invalid": [],
+                "uncited": True,
+                "used_sources": [],
+                "invalid_sources": [],
+            },
             "status": "insufficient_evidence",
+            "model": None,
         }
 
     context, sources = build_evidence_context(
         documents,
         max_context_chars=max_context_chars,
     )
-
-    if not context:
-        return {
-            "question": query,
-            "answer": "Insufficient evidence to answer the question.",
-            "sources": [],
-            "status": "insufficient_evidence",
-        }
-
     prompt = build_generation_prompt(query, context)
 
     if getattr(tokenizer, "chat_template", None):
-        messages = [{"role": "user", "content": prompt}]
         model_input = tokenizer.apply_chat_template(
-            messages,
+            [{"role": "user", "content": prompt}],
             tokenize=True,
             add_generation_prompt=True,
             return_tensors="pt",
         )
         if hasattr(model_input, "input_ids"):
-            input_ids = model_input["input_ids"]
-            attention_mask = model_input.get("attention_mask")
-            if attention_mask is None:
-                attention_mask = torch.ones_like(input_ids)
+            input_ids = model_input.input_ids
+            attention_mask = getattr(model_input, "attention_mask", None)
         else:
             input_ids = model_input
-            attention_mask = torch.ones_like(input_ids)
+            attention_mask = None
     else:
         encoded = tokenizer(
             prompt,
             return_tensors="pt",
+            add_special_tokens=True,
             truncation=False,
         )
         input_ids = encoded["input_ids"]
-        attention_mask = encoded.get(
-            "attention_mask",
-            torch.ones_like(input_ids),
-        )
+        attention_mask = encoded.get("attention_mask")
 
     input_token_count = input_ids.shape[-1]
 
     if input_token_count > max_input_tokens:
         raise ValueError(
-            f"Prompt contains {input_token_count} tokens, "
-            f"exceeding the limit of {max_input_tokens}. "
+            f"Input has {input_token_count} tokens, exceeding "
+            f"the limit of {max_input_tokens}. "
             "Reduce the evidence context or increase the token limit."
         )
 
-    model_device = (
-        device
-        if device is not None
-        else str(next(model.parameters()).device)
-    )
+    if device is None:
+        try:
+            model_device = str(next(model.parameters()).device)
+        except (AttributeError, StopIteration, TypeError):
+            model_device = "cpu"
+    else:
+        model_device = device
 
     input_ids = input_ids.to(model_device)
-    attention_mask = attention_mask.to(model_device)
+    if attention_mask is not None:
+        attention_mask = attention_mask.to(model_device)
 
     model.eval()
 
-    with torch.inference_mode():
-        output = model.generate(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            max_new_tokens=max_new_tokens,
-            do_sample=False,
-            pad_token_id=tokenizer.pad_token_id,
-            eos_token_id=tokenizer.eos_token_id,
-        )
+    generation_kwargs = {
+        "input_ids": input_ids,
+        "max_new_tokens": max_new_tokens,
+        "do_sample": False,
+        "pad_token_id": getattr(tokenizer, "pad_token_id", None),
+        "eos_token_id": getattr(tokenizer, "eos_token_id", None),
+    }
+    if attention_mask is not None:
+        generation_kwargs["attention_mask"] = attention_mask
 
-    # Decoder-only models return the prompt followed by generated tokens.
-    generated_tokens = output[0, input_token_count:]
+    with torch.inference_mode():
+        output = model.generate(**generation_kwargs)
+
+    generated_tokens = output[0][input_token_count:]
     answer = tokenizer.decode(
         generated_tokens,
         skip_special_tokens=True,
@@ -272,18 +285,23 @@ def generate_grounded_answer(
 
     citation_result = validate_answer_citations(answer, sources)
 
-    status = (
-        "answered"
-        if citation_result["valid"]
-        else "uncited"
-    )
+    if citation_result["invalid"]:
+        status = "invalid_citations"
+    elif citation_result["uncited"]:
+        status = "uncited"
+    else:
+        status = "answered"
 
     return {
         "question": query,
         "answer": answer,
         "sources": sources,
-        "model": getattr(model.config, "_name_or_path", "unknown"),
+        "model": (
+            getattr(getattr(model, "config", None), "_name_or_path", None)
+            or getattr(model, "name_or_path", "unknown")
+        ),
         "status": status,
+        "citations": citation_result,
         "citation_validation": citation_result,
         "input_tokens": input_token_count,
     }
