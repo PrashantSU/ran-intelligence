@@ -17,6 +17,8 @@ dependencies = [
     "numpy",
     "pandas",
     "pydantic>=2",
+    "pydantic-settings>=2",
+    "pyarrow",
     "python-dotenv",
     "PyYAML",
     "loguru",

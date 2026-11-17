@@ -33,3 +33,6 @@ artifacts/*
 logs/
 *.log
 .DS_Store
+
+# Original AERPAW dataset archive
+Ericsson_Amir.zip
