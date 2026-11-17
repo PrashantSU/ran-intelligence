@@ -127,3 +127,98 @@ def plot_kpi_missingness(summary: pd.DataFrame) -> go.Figure:
         template="plotly_white",
     )
     return figure
+
+
+def plot_anomaly_detection(
+    measurements: pd.DataFrame,
+    anomalies: pd.DataFrame,
+    session_id: str,
+    metric: str,
+):
+    """Plot raw KPI measurements and detected anomaly observations."""
+    import plotly.graph_objects as go
+
+    required_measurement_columns = {"session_id", "timestamp", metric}
+    required_anomaly_columns = {
+        "session_id",
+        "kpi",
+        "timestamp",
+        "value",
+        "robust_z_score",
+        "is_anomaly",
+    }
+
+    missing_measurements = required_measurement_columns - set(measurements.columns)
+    missing_anomalies = required_anomaly_columns - set(anomalies.columns)
+
+    if missing_measurements:
+        raise ValueError(f"Measurements missing columns: {sorted(missing_measurements)}")
+    if missing_anomalies:
+        raise ValueError(f"Anomalies missing columns: {sorted(missing_anomalies)}")
+
+    session_data = measurements[measurements["session_id"] == session_id].copy()
+
+    if session_data.empty:
+        raise ValueError(f"No measurements found for session: {session_id}")
+
+    session_data["timestamp"] = pd.to_datetime(session_data["timestamp"], errors="coerce")
+    session_data[metric] = pd.to_numeric(session_data[metric], errors="coerce")
+    session_data = session_data.dropna(subset=["timestamp", metric]).sort_values("timestamp")
+
+    if session_data.empty:
+        raise ValueError(f"No valid observations found for {metric} in {session_id}")
+
+    anomaly_data = anomalies[
+        (anomalies["session_id"] == session_id)
+        & (anomalies["kpi"] == metric)
+        & anomalies["is_anomaly"].astype(bool)
+    ].copy()
+
+    anomaly_data["timestamp"] = pd.to_datetime(anomaly_data["timestamp"], errors="coerce")
+    anomaly_data["value"] = pd.to_numeric(anomaly_data["value"], errors="coerce")
+    anomaly_data["robust_z_score"] = pd.to_numeric(anomaly_data["robust_z_score"], errors="coerce")
+    anomaly_data = anomaly_data.dropna(subset=["timestamp", "value", "robust_z_score"])
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Scattergl(
+            x=session_data["timestamp"],
+            y=session_data[metric],
+            mode="lines",
+            name="KPI measurements",
+            line={"width": 1.2},
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=anomaly_data["timestamp"],
+            y=anomaly_data["value"],
+            mode="markers",
+            name="Detected anomalies",
+            marker={
+                "symbol": "x",
+                "size": 10,
+                "color": "red",
+            },
+            customdata=anomaly_data[["robust_z_score"]].to_numpy(),
+            hovertemplate=(
+                "Time: %{x}<br>"
+                "Value: %{y}<br>"
+                "Robust z-score: %{customdata[0]:.2f}"
+                "<extra>Anomaly</extra>"
+            ),
+        )
+    )
+
+    fig.update_layout(
+        title=f"{metric} — {session_id}",
+        xaxis_title="Timestamp",
+        yaxis_title=metric,
+        hovermode="closest",
+        template="plotly_white",
+        legend_title="Observation type",
+    )
+
+    return fig
