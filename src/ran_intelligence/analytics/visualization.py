@@ -222,3 +222,71 @@ def plot_anomaly_detection(
     )
 
     return fig
+
+
+def plot_forecast_predictions(
+    predictions: pd.DataFrame,
+    session_id: str,
+    metric: str,
+):
+    """Plot actual values against baseline and model forecasts."""
+    import plotly.graph_objects as go
+
+    required = {
+        "origin_timestamp",
+        "target_timestamp",
+        "actual",
+        "persistence_prediction",
+        "random_forest_prediction",
+    }
+
+    missing = required - set(predictions.columns)
+    if missing:
+        raise ValueError(f"Missing prediction columns: {sorted(missing)}")
+
+    if predictions.empty:
+        raise ValueError("Predictions cannot be empty.")
+
+    data = predictions.sort_values("target_timestamp").copy()
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Scatter(
+            x=data["target_timestamp"],
+            y=data["actual"],
+            mode="lines",
+            name="Actual",
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=data["target_timestamp"],
+            y=data["persistence_prediction"],
+            mode="lines",
+            name="Persistence baseline",
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=data["target_timestamp"],
+            y=data["random_forest_prediction"],
+            mode="lines",
+            name="Random Forest",
+        )
+    )
+
+    unit = KPI_DEFINITIONS.get(metric, {"unit": ""})["unit"]
+
+    fig.update_layout(
+        title=f"{metric} — 5-second forecast ({session_id})",
+        xaxis_title="Target timestamp",
+        yaxis_title=unit,
+        hovermode="x unified",
+        template="plotly_white",
+        legend_title="Forecast",
+    )
+
+    return fig

@@ -79,3 +79,77 @@ def test_missingness_chart_calculates_percentages(sample_summary):
     assert fig.data[1].name == "yaw45"
     assert fig.data[0].y[0] == pytest.approx(expected_yaw315)
     assert fig.data[1].y[0] == pytest.approx(expected_yaw45)
+
+
+def test_plot_forecast_predictions():
+    import pandas as pd
+
+    from ran_intelligence.analytics.visualization import (
+        plot_forecast_predictions,
+    )
+
+    predictions = pd.DataFrame(
+        {
+            "origin_timestamp": pd.date_range("2023-01-01", periods=3, freq="s"),
+            "target_timestamp": pd.date_range("2023-01-01 00:00:05", periods=3, freq="s"),
+            "actual": [20.0, 21.0, 19.0],
+            "persistence_prediction": [20.0, 20.0, 20.0],
+            "random_forest_prediction": [20.5, 20.8, 19.5],
+        }
+    )
+
+    fig = plot_forecast_predictions(
+        predictions,
+        session_id="yaw315",
+        metric="nr_sinr_db",
+    )
+
+    assert len(fig.data) == 3
+    assert list(fig.data[0].y) == [20.0, 21.0, 19.0]
+    assert fig.data[0].name == "Actual"
+    assert fig.data[1].name == "Persistence baseline"
+    assert fig.data[2].name == "Random Forest"
+
+
+def test_plot_forecast_predictions_rejects_missing_columns():
+    import pandas as pd
+    import pytest
+
+    from ran_intelligence.analytics.visualization import (
+        plot_forecast_predictions,
+    )
+
+    predictions = pd.DataFrame({"actual": [20.0]})
+
+    with pytest.raises(ValueError, match="Missing prediction columns"):
+        plot_forecast_predictions(
+            predictions,
+            session_id="yaw315",
+            metric="nr_sinr_db",
+        )
+
+
+def test_plot_forecast_predictions_rejects_empty_data():
+    import pandas as pd
+    import pytest
+
+    from ran_intelligence.analytics.visualization import (
+        plot_forecast_predictions,
+    )
+
+    predictions = pd.DataFrame(
+        columns=[
+            "origin_timestamp",
+            "target_timestamp",
+            "actual",
+            "persistence_prediction",
+            "random_forest_prediction",
+        ]
+    )
+
+    with pytest.raises(ValueError, match="cannot be empty"):
+        plot_forecast_predictions(
+            predictions,
+            session_id="yaw315",
+            metric="nr_sinr_db",
+        )
