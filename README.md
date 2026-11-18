@@ -6,6 +6,10 @@ An end-to-end research and engineering prototype for analysing 4G/5G Radio Acces
 
 The platform is advisory. It does not connect to or make changes to live mobile networks.
 
+## System Architecture
+
+![RAN Intelligence Platform Architecture](docs/images/architecture.png)
+
 ## Features
 
 - **Data engineering:** ingestion, validation, cleaning, transformation and Parquet storage.
