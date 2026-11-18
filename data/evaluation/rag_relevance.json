@@ -1,0 +1,48 @@
+{
+  "dataset_name": "etsi_5g_nr_retrieval_v1",
+  "judgment_method": "Manual review of retrieved candidate passages",
+  "limitation": "Initial pooled-candidate judgments, not an exhaustive corpus-wide gold standard. Recall metrics are conditional on the judged pool.",
+  "queries": {
+    "q1_pdsch": {
+      "query": "5G NR physical downlink shared channel PDSCH resource allocation and modulation",
+      "relevant_chunk_ids": [
+        "f4e993f189cd56f8",
+        "9d9a18cbfa61d8e5",
+        "afd4d4a8a5a6999b"
+      ]
+    },
+    "q2_rrc": {
+      "query": "5G NR radio resource control RRC connection establishment and state transitions",
+      "relevant_chunk_ids": [
+        "8d4ab80da55a0365",
+        "23ff4e84c23e31c4",
+        "98256e619abe3d19",
+        "7e9af73d125a81d4"
+      ]
+    },
+    "q3_handover": {
+      "query": "5G NR mobility management handover procedure measurement reporting",
+      "relevant_chunk_ids": [
+        "f1c131c5dbd08806",
+        "8588701ca32732b7",
+        "b602d6c79e359f04"
+      ]
+    },
+    "q4_architecture": {
+      "query": "5G system architecture NG-RAN gNB CU DU interfaces",
+      "relevant_chunk_ids": [
+        "bb7c4fb6f4031b5e"
+      ]
+    },
+    "q5_beamforming": {
+      "query": "5G NR antenna ports beamforming precoding and MIMO transmission",
+      "relevant_chunk_ids": [
+        "f545a6edb016bbdf",
+        "b38d81adb9655cfc",
+        "c0fa165a9abfab6d",
+        "c0c0bfec8201ff87",
+        "e95e70a0da31dcbf"
+      ]
+    }
+  }
+}

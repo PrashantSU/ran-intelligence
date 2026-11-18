@@ -80,8 +80,13 @@ Return valid JSON only, with this structure:
 def parse_grounded_hypotheses(
     payload: dict[str, Any] | str,
     evidence: list,
+    strict: bool = True,
 ) -> list[IncidentHypothesis]:
-    """Parse hypotheses and reject unsupported or fabricated evidence references."""
+    """Parse evidence-grounded hypotheses.
+
+    Strict mode raises on invalid hypotheses.
+    Tolerant mode skips invalid hypotheses individually.
+    """
     if isinstance(payload, str):
         payload = json.loads(payload)
 
@@ -96,31 +101,38 @@ def parse_grounded_hypotheses(
     parsed: list[IncidentHypothesis] = []
 
     for raw in raw_hypotheses:
-        hypothesis = IncidentHypothesis.model_validate(raw)
+        try:
+            hypothesis = IncidentHypothesis.model_validate(raw)
 
-        supporting = set(hypothesis.supporting_evidence_ids)
-        contradicting = set(hypothesis.contradicting_evidence_ids)
-        referenced = supporting | contradicting
+            supporting = set(hypothesis.supporting_evidence_ids)
+            contradicting = set(hypothesis.contradicting_evidence_ids)
+            referenced = supporting | contradicting
 
-        unknown = referenced - known_ids
-        if unknown:
-            raise ValueError(
-                "Hypothesis references unknown evidence IDs: "
-                f"{sorted(unknown)}"
-            )
+            unknown = referenced - known_ids
+            if unknown:
+                raise ValueError(
+                    "Hypothesis references unknown evidence IDs: "
+                    f"{sorted(unknown)}"
+                )
 
-        if not referenced:
-            raise ValueError(
-                f"Hypothesis {hypothesis.hypothesis_id} has no evidence references."
-            )
+            if not referenced:
+                raise ValueError(
+                    f"Hypothesis {hypothesis.hypothesis_id} "
+                    "has no evidence references."
+                )
 
-        if supporting & contradicting:
-            raise ValueError(
-                f"Hypothesis {hypothesis.hypothesis_id} uses the same evidence "
-                "as both supporting and contradicting."
-            )
+            if supporting & contradicting:
+                raise ValueError(
+                    f"Hypothesis {hypothesis.hypothesis_id} uses the same "
+                    "evidence as both supporting and contradicting."
+                )
 
-        parsed.append(hypothesis)
+            parsed.append(hypothesis)
+
+        except (ValueError, TypeError, KeyError):
+            if strict:
+                raise
+            continue
 
     return parsed
 
@@ -129,7 +141,7 @@ def generate_grounded_hypotheses(
     state: InvestigationState,
     structured_generator: Callable[[str], dict[str, Any] | str],
 ) -> list[IncidentHypothesis]:
-    """Generate and validate hypotheses using an injected structured-output model."""
+    """Generate hypotheses and skip individually invalid model outputs."""
     evidence = state.get("evidence", [])
 
     if not evidence:
@@ -138,4 +150,8 @@ def generate_grounded_hypotheses(
     prompt = build_hypothesis_prompt(state)
     response = structured_generator(prompt)
 
-    return parse_grounded_hypotheses(response, evidence)
+    return parse_grounded_hypotheses(
+        response,
+        evidence,
+        strict=False,
+    )

@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Callable
+from time import perf_counter
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -20,6 +21,7 @@ ToolName = Literal[
 ]
 
 
+
 class ToolExecutionResult(BaseModel):
     """Outcome of one investigation tool invocation."""
 
@@ -28,6 +30,7 @@ class ToolExecutionResult(BaseModel):
     evidence: list[EvidenceItem] = Field(default_factory=list)
     error: str | None = None
     raw_output: Any = None
+    latency_ms: float = 0.0
 
 
 class InvestigationToolbox:
@@ -290,22 +293,24 @@ class InvestigationToolbox:
         tool_name: str,
         incident: IncidentRequest,
     ) -> ToolExecutionResult:
-        """Execute one configured investigation tool."""
+        """Execute one configured investigation tool and record latency."""
         if tool_name not in self.EVIDENCE_TYPES:
             raise ValueError(f"Unknown investigation tool: {tool_name}")
 
+        start = perf_counter()
         handler = self.handlers.get(tool_name)
+
         if handler is None:
             return ToolExecutionResult(
                 tool_name=tool_name,
                 status="unavailable",
                 error=f"No handler configured for '{tool_name}'.",
+                latency_ms=(perf_counter() - start) * 1000,
             )
 
         try:
             output = handler(incident)
             safe_output = self._json_safe(output)
-            # Preserve existing EvidenceItem objects and their IDs.
             evidence = self._to_evidence(tool_name, output)
 
             return ToolExecutionResult(
@@ -313,12 +318,14 @@ class InvestigationToolbox:
                 status="success",
                 evidence=evidence,
                 raw_output=safe_output,
+                latency_ms=(perf_counter() - start) * 1000,
             )
         except Exception as exc:
             return ToolExecutionResult(
                 tool_name=tool_name,
                 status="failed",
                 error=f"{type(exc).__name__}: {exc}",
+                latency_ms=(perf_counter() - start) * 1000,
             )
 
     def run_all(

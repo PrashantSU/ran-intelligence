@@ -80,6 +80,12 @@ def build_investigation_graph(
             "Collected evidence does not by itself establish a confirmed root cause.",
         ]
 
+        recommended_actions = [
+            "Review the collected evidence and its source data.",
+            "Validate plausible explanations against network telemetry.",
+            "Do not make network configuration changes based solely on this report.",
+        ]
+
         if state.get("errors"):
             limitations.append(
                 "One or more investigation tools failed; see the recorded errors."
@@ -90,17 +96,35 @@ def build_investigation_graph(
                 "No evidence was collected. Root-cause assessment is unavailable."
             )
 
+        elif not hypotheses:
+            summary += (
+                " No defensible root-cause hypothesis could be established "
+                "from the collected evidence."
+            )
+            limitations.append(
+                "Automated synthesis produced no hypotheses that passed "
+                "evidence-reference validation. This does not mean that "
+                "the network has no underlying fault."
+            )
+            recommended_actions.insert(
+                1,
+                "Collect additional time-aligned telemetry and investigate "
+                "the incident with domain-specific checks.",
+            )
+
+        else:
+            summary += (
+                f" Generated {len(hypotheses)} evidence-referenced "
+                "plausible hypothesis(es) for human assessment."
+            )
+
         report = IncidentReport(
             incident_id=state["incident"].incident_id,
             summary=summary,
             evidence=evidence,
             hypotheses=hypotheses,
             limitations=limitations,
-            recommended_actions=[
-                "Review the collected evidence and its source data.",
-                "Validate plausible explanations against network telemetry.",
-                "Do not make network configuration changes based solely on this report.",
-            ],
+            recommended_actions=recommended_actions,
             requires_human_review=True,
             investigation_status=status,
         )
