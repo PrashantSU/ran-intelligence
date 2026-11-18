@@ -1,0 +1,6 @@
+numpy==1.26.4
+torch==2.6.0+cpu
+sentence-transformers==3.4.1
+transformers==4.48.3
+huggingface-hub==0.28.1
+tokenizers==0.21.0
