@@ -50,6 +50,7 @@ agents = [
 
 dashboard = [
     "streamlit",
+    "requests",
 ]
 
 dev = [
