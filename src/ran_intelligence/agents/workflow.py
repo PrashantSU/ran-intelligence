@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
@@ -175,8 +176,18 @@ def build_investigation_graph(
     builder.add_edge("prepare_human_review", "human_review")
     builder.add_edge("human_review", END)
 
-    active_checkpointer = (
-        checkpointer if checkpointer is not None else MemorySaver()
-    )
+    if checkpointer is not None:
+        active_checkpointer = checkpointer
+    else:
+        serializer = JsonPlusSerializer(
+            allowed_msgpack_modules=[
+                ("ran_intelligence.agents.schemas", "IncidentRequest"),
+                ("ran_intelligence.agents.schemas", "EvidenceItem"),
+                ("ran_intelligence.agents.schemas", "IncidentHypothesis"),
+                ("ran_intelligence.agents.schemas", "IncidentReport"),
+                ("ran_intelligence.agents.tools", "ToolExecutionResult"),
+            ]
+        )
+        active_checkpointer = MemorySaver(serde=serializer)
 
     return builder.compile(checkpointer=active_checkpointer)
