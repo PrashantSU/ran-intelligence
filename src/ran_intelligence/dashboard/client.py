@@ -5,13 +5,23 @@ import os
 import requests
 
 
+def _get_base_url() -> str:
+    """Get API URL from environment variables or Streamlit secrets."""
+    base_url = os.getenv("RAN_API_BASE_URL")
+
+    if not base_url:
+        try:
+            import streamlit as st
+            base_url = st.secrets.get("RAN_API_BASE_URL")
+        except Exception:
+            base_url = None
+
+    return (base_url or "http://127.0.0.1:8000").rstrip("/")
+
+
 def api_request(method: str, path: str, payload: dict | None = None):
     """Call the configured API and return its JSON response."""
-    base_url = os.getenv(
-        "RAN_API_BASE_URL",
-        "http://127.0.0.1:8000",
-    ).rstrip("/")
-
+    base_url = _get_base_url()
     url = f"{base_url}/{path.lstrip('/')}"
 
     try:
