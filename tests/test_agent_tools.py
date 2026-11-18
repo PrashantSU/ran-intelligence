@@ -158,3 +158,28 @@ def test_run_all_executes_configured_tools(incident):
     ]
     assert len(calls) == 3
     assert all(result.status == "success" for result in results)
+
+
+def test_dataframe_timestamps_are_json_safe():
+    frame = pd.DataFrame({
+        "timestamp": [pd.Timestamp("2026-11-18 10:00:00")],
+        "value": [12.5],
+    })
+
+    converted = InvestigationToolbox._json_safe(frame)
+    timestamp = converted["records"][0]["timestamp"]
+
+    assert isinstance(timestamp, str)
+    assert timestamp == "2026-11-18T10:00:00"
+
+
+def test_nested_timestamps_are_json_safe():
+    value = {
+        "items": [
+            {"timestamp": pd.Timestamp("2026-11-18 10:00:00")}
+        ]
+    }
+
+    converted = InvestigationToolbox._json_safe(value)
+
+    assert isinstance(converted["items"][0]["timestamp"], str)

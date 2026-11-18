@@ -154,3 +154,27 @@ def test_rag_handler_can_be_injected(incident, measurements):
 
     assert result.status == "success", f"Adapter error: {result.error!r}"
     assert result.evidence[0].evidence_type == "rag"
+
+
+def test_anomaly_adapter_uses_only_supported_suspected_kpis(
+    incident,
+    measurements,
+):
+    incident.suspected_kpis = ["lte_sinr_db"]
+
+    toolbox = create_investigation_toolbox(
+        measurements,
+        include_simulation=False,
+    )
+
+    result = toolbox.run("anomaly", incident)
+
+    assert result.status == "success", f"Adapter error: {result.error!r}"
+
+    metadata = result.evidence[0].metadata
+
+    assert metadata["metrics"] == ["lte_sinr_db"]
+    assert all(
+        sample["kpi"] == "lte_sinr_db"
+        for sample in metadata["anomaly_samples"]["records"]
+    )

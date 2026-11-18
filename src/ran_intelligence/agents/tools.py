@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Callable
+from datetime import datetime
 from time import perf_counter
 from typing import Any, Literal
 
@@ -66,14 +67,22 @@ class InvestigationToolbox:
     def _json_safe(value: Any) -> Any:
         """Convert analytical outputs into JSON-compatible values."""
         if hasattr(value, "to_dict") and hasattr(value, "columns"):
+            records = value.head(10).to_dict(orient="records")
             return {
                 "columns": list(value.columns),
                 "row_count": len(value),
-                "records": value.head(10).to_dict(orient="records"),
+                "records": [
+                    InvestigationToolbox._json_safe(record)
+                    for record in records
+                ],
             }
 
         if hasattr(value, "model_dump"):
             return value.model_dump(mode="json")
+
+        # pandas.Timestamp is a datetime subclass; convert it before .item().
+        if isinstance(value, datetime):
+            return value.isoformat()
 
         if hasattr(value, "item"):
             try:
@@ -146,6 +155,7 @@ class InvestigationToolbox:
                     "measurement_count",
                     "evaluated_observation_count",
                     "anomaly_count",
+                    "metrics",
                 )
                 if key in output
             }

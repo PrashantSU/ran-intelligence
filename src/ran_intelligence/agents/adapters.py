@@ -141,7 +141,15 @@ def create_investigation_toolbox(
 
     def anomaly_handler(incident: IncidentRequest) -> dict[str, Any]:
         frame = get_incident_data(incident)
-        metrics = _numeric_metrics(frame)
+        available_metrics = _numeric_metrics(frame)
+        metrics = [
+            metric
+            for metric in incident.suspected_kpis
+            if metric in available_metrics
+        ]
+
+        if not metrics:
+            metrics = available_metrics
 
         if not metrics:
             raise ValueError("No supported numeric KPI columns are available.")
@@ -173,6 +181,7 @@ def create_investigation_toolbox(
 
         return {
             "measurement_count": len(frame),
+            "metrics": metrics,
             "evaluated_observation_count": len(anomalies),
             "anomaly_count": len(flagged),
             "anomaly_samples": flagged.head(10).drop(
