@@ -2,187 +2,169 @@
 
 **AI-Powered 5G Network Intelligence and Incident Investigation Platform**
 
-An end-to-end research and engineering prototype for analysing 4G/5G Radio Access Network (RAN) measurements, detecting KPI anomalies, forecasting network performance, retrieving telecom standards, and assisting engineers with evidence-based incident investigation.
+An end-to-end research and engineering platform for analysing 4G/5G Radio Access Network (RAN) measurements, detecting KPI anomalies, forecasting network performance, retrieving telecom standards, and assisting engineers with evidence-based incident investigation.
 
-The platform is advisory. It does not connect to or make changes to live mobile networks.
+Combines data engineering, machine learning, hybrid RAG, agentic AI, network simulation and application engineering in one integrated system.
+
+**The platform is advisory. It does not connect to or make changes to live mobile networks.**
+
+<p align="center">
+  <a href="https://prashantsu-ran-intellige-srcran-intelligencedashboardapp-6ritgr.streamlit.app/"><strong>🚀 Live Dashboard</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://ran-intelligence-api.onrender.com/docs"><strong>API Documentation</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/PrashantSU/ran-intelligence"><strong>Source Code</strong></a>
+</p>
 
 ## System Architecture
 
-![RAN Intelligence Platform Architecture](docs/images/architecture.png)
+<p align="center">
+  <img src="docs/images/architecture.png" alt="RAN Intelligence Platform System Architecture" width="100%">
+</p>
 
-## Features
+## What the Platform Includes
 
-- **Data engineering:** ingestion, validation, cleaning, transformation and Parquet storage.
-- **KPI analytics:** LTE/NR measurement summaries, session comparisons and time-series analysis.
-- **Anomaly detection:** robust statistical detection and event grouping.
-- **Forecasting:** persistence, Random Forest, XGBoost and GRU-based KPI forecasting.
-- **Telecom RAG:** hybrid FAISS/BM25 retrieval, reciprocal-rank fusion, reranking and grounded answers with source references.
-- **Incident investigation:** LangGraph workflow with KPI, anomaly, forecasting, RAG and simulation tools.
-- **Digital twin:** simplified cell and user simulation with configurable network scenarios.
-- **5G NR lab:** educational beamforming and scheduling experiments.
-- **Evaluation and observability:** retrieval metrics, report checks, tool latency and investigation traces.
-- **FastAPI backend:** versioned endpoints for analytics, retrieval and incident workflows.
-- **Human review:** investigation reports pause for engineer approval or rejection.
+| Component | Implementation |
+|---|---|
+| Data Engineering | Measurement ingestion, validation, cleaning, transformation and Parquet storage |
+| KPI Analytics | LTE/NR measurement summaries, session comparisons and time-series analysis |
+| Anomaly Detection | Robust statistical detection and event grouping |
+| KPI Forecasting | Persistence, Random Forest, XGBoost and GRU models |
+| Telecom RAG | Hybrid FAISS/BM25 retrieval, Reciprocal Rank Fusion, reranking and grounded answers |
+| Agentic Investigation | LangGraph workflow coordinating analytics, forecasting, RAG and simulation tools |
+| Digital Twin | Simplified cell and user simulation with configurable network scenarios |
+| 5G NR Lab | Educational beamforming and scheduling experiments |
+| Evaluation & Observability | Retrieval metrics, report validation, tool latency and investigation traces |
+| Human-in-the-Loop | Investigation reports pause for engineer approval or rejection |
+| Backend & Application | FastAPI REST services and interactive Streamlit dashboard |
 
-## Architecture
+## Explore the Platform
 
-```text
-Public RAN measurements
-        |
-        v
-Data ingestion and validation
-        |
-        v
-KPI analytics and storage
-        |
-        +---- Anomaly detection
-        +---- KPI forecasting
-        +---- Telecom document retrieval
-        +---- Network what-if simulation
-                       |
-                       v
-             Incident investigation agent
-                       |
-                       v
-              Evidence-based report
-                       |
-                       v
-                 Human review
-                       |
-                       v
-              FastAPI backend
-                       |
-                       v
-               Streamlit dashboard
-```
+The application is organised into seven interactive workspaces.
 
-## Dataset
+### 1. Network Overview
+Explore the available RAN measurements and network-level analytical information.
 
-The data pipeline uses the publicly available AERPAW Ericsson 5G NSA RF and throughput dataset.
+### 2. KPI Explorer
+Inspect radio and throughput measurements, compare measurement sessions and analyse KPI behaviour over time.
 
-- Source: [Dryad dataset](https://doi.org/10.5061/dryad.wh70rxx06)
-- The dataset contains two short measurement sessions.
-- Radio and throughput observations are matched using timestamps with a 250 ms tolerance.
-- Unmatched throughput observations are retained separately.
+### 3. Anomaly Detection
+Identify unusual KPI patterns using statistical detection methods and inspect grouped anomaly events.
 
-The dataset is limited in duration and coverage. Results are descriptive and experimental; they should not be interpreted as evidence of generalisation to operational mobile networks. Throughput units and measurement semantics should be verified before using them for operational conclusions.
+### 4. Forecasting Lab
+Compare four forecasting approaches:
 
-## Technology
+- Persistence baseline
+- Random Forest
+- XGBoost
+- GRU neural network
 
-- Python, pandas, NumPy and PyArrow
-- Pydantic and pydantic-settings
-- scikit-learn, XGBoost and PyTorch
-- Sentence Transformers, FAISS and BM25
-- LangChain and LangGraph
-- FastAPI and Streamlit
-- Plotly and pytest
+Evaluate prediction performance and inspect model behaviour on the available measurement sessions.
 
-## Repository structure
+### 5. Telecom Knowledge — Hybrid RAG
 
-```text
-src/ran_intelligence/
-    agents/          Incident investigation workflow
-    analytics/       KPI analytics and visualisation
-    api/             FastAPI application and services
-    core/            Application configuration
-    dashboard/       Streamlit application
-    data/            Data ingestion and validation
-    evaluation/      Evaluation and observability
-    ml/              Anomaly detection and forecasting
-    rag/             Telecom document retrieval and generation
-    simulation/      Digital twin and 5G NR lab
-tests/               Automated tests
-data/                Local datasets and indexes (not committed)
-artifacts/           Generated reports and evaluation outputs
-```
+A domain-specific retrieval-augmented generation pipeline over 3GPP/ETSI telecom documentation.
 
-## Setup in Google Colab
+**Retrieval pipeline:**
 
-Clone the repository:
+1. Semantic retrieval using sentence embeddings and FAISS.
+2. BM25 keyword retrieval for exact technical terminology.
+3. Reciprocal Rank Fusion (RRF) to combine retrieval rankings.
+4. Reranking to improve the ordering of candidate passages.
+5. Grounded answer generation with supporting source references.
 
-```bash
-git clone https://github.com/PrashantSU/ran-intelligence.git
-cd ran-intelligence
-```
+**Why hybrid retrieval?**
 
-Install the project and required optional dependencies:
+Telecom standards contain both conceptual explanations and precise technical identifiers. Semantic search captures conceptual similarity, while BM25 helps find exact specification references, protocol terms and parameter names. RRF combines their rankings, and reranking further refines the retrieved evidence before generation.
 
-```bash
-pip install -e ".[api,analytics,rag,agents,dashboard,dev]" pymupdf
-```
+### 6. Incident Investigation — Agentic AI
 
-The processed AERPAW dataset is expected at:
+A LangGraph-based investigation workflow that coordinates the platform's analytical tools.
 
-```text
-data/processed/aerpaw/aerpaw_measurements.parquet
-```
+An engineer provides an incident description, measurement session, time window and severity. The workflow can:
 
-The telecom RAG index is expected at:
+- Collect relevant KPI evidence.
+- Examine anomaly detections.
+- Retrieve forecasting results.
+- Search relevant telecom standards and documentation.
+- Use network simulation as additional evidence.
+- Generate a structured investigation report.
+- Pause for human review and feedback.
 
-```text
-data/processed/etsi/index/
-```
+The workflow distinguishes observed evidence from hypotheses. An anomaly is not automatically a confirmed network fault, and an AI-generated explanation is not treated as an established diagnosis.
 
-The RAG index path can be overridden with `RAN_RAG_INDEX_PATH`.
+### 7. Architecture & Engineering
 
-Dataset files, downloaded documents, indexes, model weights and generated artifacts are not intended to be committed to Git.
+Inspect the system architecture and the components connecting data processing, analytics, machine learning, retrieval, agent workflows and application services.
 
-## FastAPI
+---
 
-Start the API from the repository root:
+## Data Engineering & Dataset
 
-```bash
-uvicorn ran_intelligence.api.app:app --host 0.0.0.0 --port 8000
-```
+The platform uses the publicly available AERPAW Ericsson 5G NSA RF and throughput dataset.
 
-Interactive API documentation is available at `/docs`, with the OpenAPI schema at `/openapi.json`.
+**Source:** [AERPAW dataset — Dryad](https://doi.org/10.5061/dryad.wh70rxx06)
 
-### Main endpoints
+The pipeline processes two measurement sessions:
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/health` | Application health |
-| GET | `/api/v1/data/summary` | Dataset summary |
-| GET | `/api/v1/kpis` | Available KPIs |
-| GET | `/api/v1/kpis/summary` | KPI summary |
-| GET | `/api/v1/kpis/sessions` | Session comparison |
-| GET | `/api/v1/kpis/timeseries` | KPI time series |
-| POST | `/api/v1/anomalies/detect` | Detect KPI anomalies |
-| POST | `/api/v1/forecasts/evaluate` | Evaluate KPI forecasts |
-| POST | `/api/v1/rag/search` | Search telecom documents |
-| POST | `/api/v1/incidents` | Start an investigation |
-| GET | `/api/v1/incidents/{thread_id}` | Retrieve investigation state |
-| POST | `/api/v1/incidents/{thread_id}/review` | Approve or reject a report |
+| Measurement | yaw315 | yaw45 |
+|---|---:|---:|
+| Radio observations | 2,898 | 2,949 |
+| Throughput observations | 786 | 818 |
+| Matched throughput | 769 | 797 |
+| Unmatched throughput | 17 | 21 |
 
-## Incident investigation
+**Combined processing results:**
 
-An engineer submits an incident description, measurement session, time window and severity. The workflow can collect KPI, anomaly, forecasting, RAG and simulation evidence before producing a structured report.
+- 5,847 radio observations.
+- 1,604 throughput observations.
+- 1,566 matched radio-throughput observations.
+- 38 unmatched throughput observations.
 
-The report distinguishes observed evidence from hypotheses. A statistical anomaly is not automatically a confirmed network fault, and a low SINR value alone does not establish interference as the cause.
+Radio and throughput observations are matched using timestamps with a 250 ms tolerance. Unmatched throughput observations are retained separately, and the pipeline generates data-quality reports.
 
-The workflow pauses for human review. The engineer can approve or reject the report and provide feedback.
+The dataset contains only two short measurement sessions. Results are descriptive and experimental, not evidence of generalisation to operational mobile networks. Throughput units and measurement semantics should be verified before operational interpretation.
 
-## Evaluation
+## Model Evaluation
 
-The project includes automated tests for data processing, analytics, anomaly detection, forecasting, retrieval, agent workflows, API behaviour and report validation.
+### KPI Forecasting — yaw315
 
-Retrieval metrics include Precision@K, Recall@K, reciprocal rank and NDCG. Agent evaluation includes tool execution status, evidence counts, latency and human-review state.
+Models were evaluated using a time-ordered test split containing 151 observations.
 
-Evaluation results on this small dataset and manually judged retrieval queries are prototype measurements, not comprehensive production benchmarks.
+| Model | MAE | RMSE |
+|---|---:|---:|
+| Persistence | 5.490 | 6.935 |
+| Random Forest | 5.366 | 7.011 |
+| XGBoost | 5.405 | 6.967 |
+| **GRU** | **4.608** | **6.308** |
 
-## Important limitations
+The GRU achieved the lowest MAE and RMSE among the evaluated models on this measurement session.
 
-- The digital twin is a simplified educational system-level model, not a commercial or full 3GPP-compliant network simulator.
-- The AERPAW dataset contains only two short sessions; forecasting results do not establish generalisation to unseen sessions or networks.
-- The incident agent provides decision support, not autonomous fault confirmation or network control.
-- LangGraph checkpoints and active incident-thread tracking currently use in-memory storage. They do not provide durable recovery across process restarts or coordination across multiple API workers.
-- The RAG service loads a local BM25 pickle file. Only load indexes from trusted sources.
-- The project is a prototype, not a production network-management platform.
+These results demonstrate model comparison on the available data. They do not establish generalisation to unseen sessions or networks.
 
-## Development status
+### RAG and Agent Evaluation
 
-Core data engineering, analytics, anomaly detection, forecasting, telecom RAG, simulation, incident investigation, evaluation and observability are implemented and tested. The FastAPI backend is implemented. The Streamlit dashboard and final end-to-end integration are the remaining development work.
+The project includes evaluation components for:
 
-## License
+- Retrieval Precision@K and Recall@K.
+- Mean Reciprocal Rank (MRR).
+- Normalised Discounted Cumulative Gain (NDCG).
+- Investigation report validation.
+- Tool execution status and evidence counts.
+- Workflow latency and human-review state.
 
-Add a license before redistributing the project.
+Retrieval evaluation uses manually judged queries. These are prototype evaluation capabilities, not comprehensive production benchmarks.
+
+## Engineering Highlights
+
+The project goes beyond standalone notebooks and models. It integrates the complete workflow into a modular application.
+
+- **Data engineering:** Ingestion, schema validation, timestamp alignment, data-quality checks and Parquet-based processing.
+- **Analytics:** KPI summaries, session comparisons and time-series exploration.
+- **Machine learning:** Multiple forecasting models and statistical anomaly detection.
+- **Retrieval engineering:** Semantic and lexical retrieval, ranking fusion, reranking and source-grounded generation.
+- **Agent orchestration:** Multi-tool incident investigation using LangGraph.
+- **Simulation:** Simplified digital twin and interactive 5G NR experiments.
+- **Backend engineering:** Versioned REST APIs and structured request/response validation.
+- **Frontend engineering:** Interactive Streamlit workspaces and Plotly visualisations.
+- **Testing:** Automated tests covering core processing, analytics, ML,
