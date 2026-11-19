@@ -19,7 +19,7 @@ Combines data engineering, machine learning, hybrid RAG, agentic AI, network sim
 ## System Architecture
 
 <p align="center">
-  <img src="docs/images/architecture.png" alt="RAN Intelligence Platform System Architecture" width="100%">
+  <img src="docs/images/RAN Intelligence Platform Architecture and Workflow.png" alt="RAN Intelligence Platform System Architecture" width="100%">
 </p>
 
 ## What the Platform Includes
